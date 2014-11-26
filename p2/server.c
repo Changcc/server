@@ -158,8 +158,8 @@ void dostuff (int sock)
      send(sock, buf, strlen(buf), 0);
 	 strcpy(buf, SERVER_STRING);
 	 send(sock, buf, strlen(buf), 0);
-	 sprintf(buf, "Content-Type: text/html\r\n");
-	 send(sock, buf, strlen(buf), 0);
+	 // sprintf(buf, "Content-Type: text/html\r\n");
+// 	 send(sock, buf, strlen(buf), 0);
 	 strcpy(buf, "\r\n");
 	 send(sock, buf, strlen(buf), 0);
 	 

@@ -1,7 +1,7 @@
 #define SYN_FLAG 0x0001
 #define ACK_FLAG 0x0002
 #define FIN_FLAG 0x0004
-#define PACKET_SIZE 982
+#define DATA_SIZE 982
 
 struct packet
 {
@@ -18,7 +18,7 @@ struct packet
 
     // Data
     int d_length;
-    char data[PACKET_SIZE];
+    char data[DATA_SIZE];
 };
 
 int check_syn(struct packet *p);

@@ -29,3 +29,5 @@ void set_ack(struct packet *p);
 
 int check_fin(struct packet *p);
 void set_fin(struct packet *p);
+
+struct packet* make_packet();

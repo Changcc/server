@@ -5,6 +5,7 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <strings.h>
+#include "packet.h"
 
 void error(char *msg)
 {
@@ -12,19 +13,32 @@ void error(char *msg)
     exit(0);
 }
 
+double chance()
+{
+    return (double)rand() / (double)RAND_MAX;
+}
+
 int main(int argc, char *argv[])
 {
     int sockfd;
-    int portno, n;
+    int portno, n_char;
+    int serv_addr_size;
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
     char *hostname, *filename;
 
-    float p_loss, p_corrupt;
+    double p_loss, p_corrupt;
+    p_loss = 0.0;
+    p_corrupt = 0.0;
 
-    char buffer[256];
-    
+    char recv_data[MAX_LENGTH];
+
+    int expect_seq_num;
+    struct packet *snd_pkt, *rcv_pkt;
+
+    FILE* file;
+
     if (argc < 4)
     {
         fprintf(stderr, "Usage: %s hostname port filename [loss ratio] [corrupt ratio]\n", argv[0]);
@@ -44,6 +58,13 @@ int main(int argc, char *argv[])
             break;
     }
 
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Using UDP!
+
+    if (sockfd < 0)
+    {
+        error("Error opening socket");
+    }
+
     server = gethostbyname(hostname);
     if (server == NULL)
     {
@@ -51,24 +72,64 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    // sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Using UDP!
+    bzero((char *)&serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+    serv_addr.sin_port = htons(portno);
 
-    // if (sockfd < 0)
-    // {
-    //     error("Error opening socket");
-    // }
+    // Create the initial packet
+    expect_seq_num = 1;
+    snd_pkt = make_packet();
 
-    // bzero((char *)&serv_addr, sizeof(serv_addr));
-    // serv_addr.sin_family = AF_INET;
-    // bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-    // serv_addr.sin_port = htons(portno);
+    set_syn(snd_pkt);
+    snd_pkt->seq_num = 0;
+    set_data(snd_pkt, filename);
 
-    /*
-     * 1. Make connection built on reliable data transfer algorithm
-     * 2. Using connection, send data
-     * 3. Receive data
-     * 4. Print data
-     */
+    serv_addr_size = sizeof(serv_addr);
 
+    file = fopen(strcat(filename, "_copy"), "wb");
 
+    // Send the initial packet
+    n_char = sendto(sockfd, snd_pkt, sizeof(snd_pkt), 0, (struct sockaddr*)&serv_addr, serv_addr_size);
+    if (n_char < 0)
+    {
+        error("Error sending packet");
+    }
+
+    // Go-Back-N FSM
+    while (1)
+    {
+        // Wait to receive a message
+        n_char = recvfrom(sockfd, rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr*)&serv_addr, (socklen_t*)&serv_addr_size);
+
+        if (n_char < 0)
+        {
+            printf("Packet lost\n");
+        }
+        else if (chance() < p_loss)
+        {
+            printf("Packet lost\n");
+        }
+        else if (chance() < p_corrupt)
+        {
+            printf("Packet corrupted\n");
+        }
+        else if (rcv_pkt->seq_num == expect_seq_num)
+        {
+            fwrite(rcv_pkt->data, 1, rcv_pkt->d_length, file);
+
+            free(snd_pkt);
+            snd_pkt = make_packet();
+            set_ack(snd_pkt);
+            snd_pkt->seq_num = expect_seq_num;
+
+            n_char = sendto(sockfd, snd_pkt, sizeof(snd_pkt), 0, (struct sockaddr*)&serv_addr, serv_addr_size);
+
+            expect_seq_num++;
+        }
+        else
+        {
+            n_char = sendto(sockfd, snd_pkt, sizeof(snd_pkt), 0, (struct sockaddr*)&serv_addr, serv_addr_size);
+        }
+    }
 }

@@ -39,7 +39,7 @@ struct packet* make_packet()
     p->flags = 0;
     p->d_length = 0;
 
-    memset(p->data, 0, MAX_LENGTH);
+    memset(p->data, 0, DATA_SIZE);
 
     return p;
 }

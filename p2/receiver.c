@@ -127,6 +127,7 @@ int main(int argc, char *argv[])
             free(rcv_pkt);
             free(snd_pkt);
             fclose(file);
+            close(sockfd);
             break;
         }
 

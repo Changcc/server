@@ -122,6 +122,14 @@ int main(int argc, char *argv[])
 
         n_char = recvfrom(sockfd, rcv_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, (socklen_t*)&serv_addr_size);
 
+        if (check_fin(rcv_pkt)) // server closing connection
+        {
+            free(rcv_pkt);
+            free(snd_pkt);
+            fclose(file);
+            break;
+        }
+
         if (n_char < 0)
         {
             printf("Packet from sender LOST\n");

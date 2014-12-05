@@ -165,6 +165,7 @@ int main(int argc, char *argv[])
 					struct packet *finpkt = make_packet();
 					set_fin(finpkt);
 					int n_char;
+					finpkt->seq_num = nextseq;
 					n_char = sendto(sockfd, finpkt, sizeof(struct packet), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0) {
 						die("Error sending packet during fin", sockfd);

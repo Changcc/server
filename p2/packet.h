@@ -32,4 +32,4 @@ void set_fin(struct packet *p);
 
 struct packet* make_packet();
 
-void set_data(struct packet* p, char *data);
+void set_data(struct packet* p, char *data, int length);

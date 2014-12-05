@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 
         n_char = recvfrom(sockfd, rcv_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, (socklen_t*)&serv_addr_size);
 
-        if (check_fin(rcv_pkt)) // server closing connection
+        if (check_fin(rcv_pkt) && (rcv_pkt->seq_num == expect_seq_num)) // server closing connection
         {
             printf("Received FIN packet from sender\n");
             printf("Sending FIN-ACK packet to sender, closing...\n");

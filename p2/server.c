@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
     
     base = 1;
     int nextseq = 1; //next seq count
+    int pktindex;
     int timer, rcvr; //timer, rcvr pid
     struct packet pkt[N];
     char refuse_data = 'f'; //f for false t for true 
@@ -117,7 +118,8 @@ int main(int argc, char *argv[])
 				int n_char;
 				int resend_base = base;
 				while (resend_base < nextseq) {
-					n_char = sendto(sockfd, &pkt[resend_base-1], sizeof(pkt[resend_base-1]), 0, (struct sockaddr*)&cli_si, slen);
+					pktindex = resend_base - 1;
+					n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0)
 					{
 						die("Error sending packet during timeout", sockfd);
@@ -147,15 +149,16 @@ int main(int argc, char *argv[])
 				struct packet *nextpkt = make_packet();
 				set_data(nextpkt, buf);
 				nextpkt->seq_num = nextseq;
-				pkt[nextseq-1] = *nextpkt;
+				pktindex = (nextseq-1)%4;
+				pkt[pktindex] = *nextpkt;
 				int n_char;
 				printf("NextSeq: %d\n", nextseq);
-				n_char = sendto(sockfd, &pkt[nextseq-1], sizeof(pkt[nextseq-1]), 0, (struct sockaddr*)&cli_si, slen);
+				n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
 				if (n_char < 0) {
 					die("Error sending packet during data", sockfd);
 				}
 				else {
-					printf("Data sent: %s\n", pkt[nextseq].data);
+					//printf("Data sent: %s\n", pkt[pktindex].data);
 				}
 				if (nextseq == base) {
 					//start timer

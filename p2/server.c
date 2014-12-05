@@ -14,6 +14,7 @@ UPD GBN N=4
 #define T 4 //timeout seconds
  
 char timeout = 'f';
+int base;
 void die(char *s, int socket)
 {
     perror(s);
@@ -29,6 +30,12 @@ void handler(int signo)
 	//alert when timed out
     alarm(4);
     timeout = 't';
+}
+
+void updatebasehdlr(int signo)
+{
+	//updates base number when receive ack
+	base++;
 }
 int main(int argc, char *argv[])
 {
@@ -77,12 +84,13 @@ int main(int argc, char *argv[])
     	file = fopen(rcvpkt->data, "r");
     }
     
-    int base = 1;
+    base = 1;
     int nextseq = 1; //next seq count
     int timer, rcvr; //timer, rcvr pid
     struct packet pkt[N];
     char refuse_data = 'f'; //f for false t for true 
     signal(SIGALRM, handler); //sets timeout handler
+    signal(SIGUSR1, updatebasehdlr); //sets base update handler
     rcvr = fork();
     if (rcvr == 0) { //in charge of receiving ack
     	while (refuse_data == 'f') {
@@ -98,6 +106,7 @@ int main(int argc, char *argv[])
 			}
 			else {
 				printf("Packet Ack: %d\n", rcvpkt->seq_num);
+				kill(ppid, SIGUSR1);
 				base = rcvpkt->seq_num + DATA_SIZE;
 			}
     	}
@@ -108,10 +117,10 @@ int main(int argc, char *argv[])
 				int n_char;
 				int resend_base = base;
 				while (resend_base < nextseq) {
-					n_char = sendto(sockfd, &pkt[resend_base], sizeof(pkt[resend_base]), 0, (struct sockaddr*)&cli_si, slen);
+					n_char = sendto(sockfd, &pkt[resend_base-1], sizeof(pkt[resend_base-1]), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0)
 					{
-						die("Error sending packet", sockfd);
+						die("Error sending packet during timeout", sockfd);
 					}
 					resend_base++;
 				}
@@ -128,7 +137,7 @@ int main(int argc, char *argv[])
 					int n_char;
 					n_char = sendto(sockfd, finpkt, sizeof(struct packet), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0) {
-						die("Error sending packet", sockfd);
+						die("Error sending packet during fin", sockfd);
 					}
 					else {
 						close(sockfd);
@@ -138,11 +147,12 @@ int main(int argc, char *argv[])
 				struct packet *nextpkt = make_packet();
 				set_data(nextpkt, buf);
 				nextpkt->seq_num = nextseq;
-				pkt[nextseq] = *nextpkt;
+				pkt[nextseq-1] = *nextpkt;
 				int n_char;
-				n_char = sendto(sockfd, &pkt[nextseq], sizeof(pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);
+				printf("NextSeq: %d\n", nextseq);
+				n_char = sendto(sockfd, &pkt[nextseq-1], sizeof(pkt[nextseq-1]), 0, (struct sockaddr*)&cli_si, slen);
 				if (n_char < 0) {
-					die("Error sending packet", sockfd);
+					die("Error sending packet during data", sockfd);
 				}
 				else {
 					printf("Data sent: %s\n", pkt[nextseq].data);

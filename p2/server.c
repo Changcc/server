@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     
     if (check_syn(rcvpkt) != 0) {
     	//received syn flag, start connection, send packets
-    	file = fopen(rcvpkt->data, "r");
+    	file = fopen(rcvpkt->data, "rb");
     }
     
     base = 1;
@@ -146,8 +146,9 @@ int main(int argc, char *argv[])
 						die("Error sending packet during fin", sockfd);
 					}
 					else {
-						printf("Fin packet sent, goodbye...");
+						printf("Fin packet sent, goodbye...\n");
 						close(sockfd);
+						fclose(file);
 						exit(0);
 					}
 				}

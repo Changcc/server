@@ -154,8 +154,7 @@ int main(int argc, char *argv[])
 					}
 				}
 				struct packet *nextpkt = make_packet();
-				set_data(nextpkt, buf);
-				nextpkt->d_length = readlength;
+				set_data(nextpkt, buf, readlength);
 				nextpkt->seq_num = nextseq;
 				pktindex = (nextseq-1)%4;
 				pkt[pktindex] = *nextpkt;

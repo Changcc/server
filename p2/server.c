@@ -15,6 +15,7 @@ UPD GBN N=4
  
 char timeout = 'f';
 int base;
+int killp;
 void die(char *s, int socket)
 {
     perror(s);
@@ -37,12 +38,18 @@ void updatebasehdlr(int signo)
 	//updates base number when receive ack
 	base++;
 }
+
+void killparent(int signo)
+{
+	killp = 1;
+}
 int main(int argc, char *argv[])
 {
 	double p_loss, p_corrupt;
 	int ppid = getpid();
     p_loss = 0.0;
     p_corrupt = 0.0;
+    killp = 0;
     
     struct sockaddr_in serv_si, cli_si;
 	struct packet *rcvpkt;
@@ -90,13 +97,14 @@ int main(int argc, char *argv[])
     int pktindex;
     int timer, rcvr; //timer, rcvr pid
     struct packet pkt[N];
-    char refuse_data = 'f'; //f for false t for true 
+//     char refuse_data = 'f'; //f for false t for true 
     signal(SIGALRM, handler); //sets timeout handler
     signal(SIGUSR1, updatebasehdlr); //sets base update handler
+    signal(SIGUSR2, killparent); //sets base update handler
     rcvr = fork();
     if (rcvr == 0) { //in charge of receiving ack
     	int lastack = 0;
-    	while (refuse_data == 'f') {
+    	while (1) {
     		struct packet *rcvpkt;
     		rcvpkt = make_packet();
     		if ((recv_len = recvfrom(sockfd, rcvpkt, sizeof(struct packet), 0, (struct sockaddr *) &cli_si, (socklen_t*)&slen)) == -1)
@@ -108,7 +116,9 @@ int main(int argc, char *argv[])
 				printf("Packet from sender CORRUPT\n");
 			}
 			else if (check_fin(rcvpkt)) {
+				printf("Goodbye...\n");
 				close(sockfd);
+				kill(ppid, SIGUSR2);
 				exit(0);
 			}
 			else if (rcvpkt->seq_num == lastack) {
@@ -118,12 +128,17 @@ int main(int argc, char *argv[])
 				printf("Packet Ack: %d\n", rcvpkt->seq_num);
 				lastack = rcvpkt->seq_num;
 				kill(ppid, SIGUSR1);
-				base = rcvpkt->seq_num + DATA_SIZE;
+//				base = rcvpkt->seq_num + 1;
 			}
     	}
     }
     else { //is parent process
 		while (1) { //in charge of sending packets
+			if (killp == 1) {
+				fclose(file);
+				close(sockfd);
+				exit(0);
+			}
 			if (timeout == 't') {
 				int n_char;
 				int resend_base = base;
@@ -134,9 +149,11 @@ int main(int argc, char *argv[])
 					{
 						die("Error sending packet during timeout", sockfd);
 					}
+					printf("NextSeq: %d\n", resend_base);
 					resend_base++;
 				}
 				timeout = 'f';
+				alarm(4);
 			}
 		
 			if (nextseq < base + N) {
@@ -153,10 +170,7 @@ int main(int argc, char *argv[])
 						die("Error sending packet during fin", sockfd);
 					}
 					else {
-						printf("Fin packet sent, goodbye...\n");
-						close(sockfd);
-						fclose(file);
-						exit(0);
+						printf("Fin packet sent...\n");
 					}
 				}
 				struct packet *nextpkt = make_packet();
@@ -180,7 +194,7 @@ int main(int argc, char *argv[])
 				nextseq++;
 			}
 			else {
-				refuse_data = 't';
+				//refuse_data = 't';
 			}
 		}
     }

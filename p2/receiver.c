@@ -46,6 +46,8 @@ int main(int argc, char *argv[])
 
     int expect_seq_num;
     struct packet *snd_pkt, *rcv_pkt;
+    snd_pkt = NULL;
+    rcv_pkt = NULL;
 
     FILE* file;
 

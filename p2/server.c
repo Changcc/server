@@ -105,6 +105,10 @@ int main(int argc, char *argv[])
 			{
 				printf("Packet from sender CORRUPT\n");
 			}
+			else if (check_fin(rcvpkt)) {
+				close(sockfd);
+				exit(0);
+			}
 			else {
 				printf("Packet Ack: %d\n", rcvpkt->seq_num);
 				kill(ppid, SIGUSR1);
@@ -142,6 +146,7 @@ int main(int argc, char *argv[])
 						die("Error sending packet during fin", sockfd);
 					}
 					else {
+						printf("Fin packet sent, goodbye...");
 						close(sockfd);
 						exit(0);
 					}

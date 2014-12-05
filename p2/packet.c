@@ -44,9 +44,9 @@ struct packet* make_packet()
     return p;
 }
 
-void set_data(struct packet* p, char *data)
+void set_data(struct packet* p, char *data, int length)
 {
-    memcpy(p->data, data, strlen(data));
+    memcpy(p->data, data, length);
 
-    p->d_length = strlen(data);
+    p->d_length = length;
 }

@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 
     set_syn(snd_pkt);
     snd_pkt->seq_num = 0;
-    set_data(snd_pkt, filename);
+    set_data(snd_pkt, filename, strlen(filename));
 
     serv_addr_size = sizeof(serv_addr);
 
@@ -162,6 +162,7 @@ int main(int argc, char *argv[])
         else if (rcv_pkt->seq_num == expect_seq_num)
         {
             printf("Received DATA with SEQNUM %d from sender\n", rcv_pkt->seq_num);
+            printf("Length: %d\n", rcv_pkt->d_length);
             fwrite(rcv_pkt->data, 1, rcv_pkt->d_length, file);
 
             free(snd_pkt);

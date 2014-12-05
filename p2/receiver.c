@@ -22,7 +22,7 @@ void send_ack(int sockfd, struct packet *snd_pkt, struct sockaddr_in serv_addr)
 {
     printf("Sending ACK with SEQNUM %d to sender...", snd_pkt->seq_num);
     int n_char;
-    n_char = sendto(sockfd, snd_pkt, sizeof(snd_pkt), 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+    n_char = sendto(sockfd, snd_pkt, sizeof(*snd_pkt), 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
     if (n_char < 0)
     {
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 
     // Send the initial packet
     printf("Sending file request to sender...\n");
-    n_char = sendto(sockfd, snd_pkt, sizeof(snd_pkt), 0, (struct sockaddr*)&serv_addr, serv_addr_size);
+    n_char = sendto(sockfd, snd_pkt, sizeof(*snd_pkt), 0, (struct sockaddr*)&serv_addr, serv_addr_size);
     if (n_char < 0)
     {
         error("Error sending packet");
@@ -111,7 +111,14 @@ int main(int argc, char *argv[])
     while (1)
     {
         // Wait to receive a message
-        n_char = recvfrom(sockfd, rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr*)&serv_addr, (socklen_t*)&serv_addr_size);
+        if (!!rcv_pkt)
+        {
+            free(rcv_pkt);
+        }
+
+        rcv_pkt = make_packet();
+
+        n_char = recvfrom(sockfd, rcv_pkt, sizeof(*rcv_pkt), 0, (struct sockaddr*)&serv_addr, (socklen_t*)&serv_addr_size);
 
         if (n_char < 0)
         {

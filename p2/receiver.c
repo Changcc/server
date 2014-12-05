@@ -125,6 +125,19 @@ int main(int argc, char *argv[])
 
         if (check_fin(rcv_pkt)) // server closing connection
         {
+            printf("Received FIN packet from sender\n");
+            printf("Sending FIN-ACK packet to sender, closing...\n");
+
+            free(snd_pkt);
+            snd_pkt = make_packet();
+            set_fin(snd_pkt);
+
+            n_char = sendto(sockfd, snd_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+            if (n_char < 0)
+            {
+                error("Error sending FIN-ACK");
+            }
+
             free(rcv_pkt);
             free(snd_pkt);
             fclose(file);

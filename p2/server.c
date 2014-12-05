@@ -8,7 +8,7 @@ UPD GBN N=4
 #include<signal.h>
 #include<arpa/inet.h>
 #include<sys/socket.h>
-#include "packet.c"
+#include "packet.h"
  
 #define N 4 //window size
 #define T 4 //timeout seconds
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 			if (fread(buf, sizeof(char),  sizeof(buf), file) == 0) {
 				struct packet *finpkt = make_packet();
 				set_fin(finpkt);
-				
+				int n_char;
 				n_char = sendto(sockfd, &pkt[nextseq], sizeof(&pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);
 				if (n_char < 0) {
 					die("Error sending packet", sockfd);

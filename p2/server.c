@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     }
     
     printf("Waiting for syn...\n");
-    if ((recv_len = recvfrom(sockfd, rcvpkt, sizeof(&rcvpkt), 0, (struct sockaddr *) &cli_si, (socklen_t*)&slen)) == -1)
+    if ((recv_len = recvfrom(sockfd, rcvpkt, sizeof(struct packet), 0, (struct sockaddr *) &cli_si, (socklen_t*)&slen)) == -1)
 	{
         die("error receive syn", sockfd);
 	}
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     	while (refuse_data == 'f') {
     		struct packet *rcvpkt;
     		rcvpkt = make_packet();
-    		if ((recv_len = recvfrom(sockfd, rcvpkt, sizeof(&rcvpkt), 0, (struct sockaddr *) &cli_si, (socklen_t*)&slen)) == -1)
+    		if ((recv_len = recvfrom(sockfd, rcvpkt, sizeof(struct packet), 0, (struct sockaddr *) &cli_si, (socklen_t*)&slen)) == -1)
 			{
 		        die("Receive error:\n", sockfd);
 			}
@@ -127,7 +127,15 @@ int main(int argc, char *argv[])
 		if (nextseq < base + N) {
 			//while within window, keep sending packet
 			char buf[DATA_SIZE];
-			if (fread(buf, sizeof(char),  sizeof(buf), file) == 0) exit ("completed");
+			if (fread(buf, sizeof(char),  sizeof(buf), file) == 0) {
+				struct packet *finpkt = make_packet();
+				set_fin(finpkt);
+				
+				n_char = sendto(sockfd, &pkt[nextseq], sizeof(&pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);
+				if (n_char < 0) {
+					die("Error sending packet", sockfd);
+				}
+			}
 			struct packet *nextpkt = make_packet();
 			set_data(nextpkt, buf);
 			

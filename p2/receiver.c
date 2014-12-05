@@ -5,7 +5,7 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <strings.h>
-#include "packet.h"
+#include "packet.c"
 
 void error(char *msg)
 {

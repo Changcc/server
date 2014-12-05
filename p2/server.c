@@ -80,8 +80,9 @@ int main(int argc, char *argv[])
 	}
     
     if (check_syn(rcvpkt) != 0) {
-    	//received syn flag, start connection, send packets
+    	//received syn flag, start connection, send packets;
     	file = fopen(rcvpkt->data, "rb");
+    	printf("Packet ACK: %d\n", rcvpkt->seq_num);
     }
     
     base = 1;
@@ -94,6 +95,7 @@ int main(int argc, char *argv[])
     signal(SIGUSR1, updatebasehdlr); //sets base update handler
     rcvr = fork();
     if (rcvr == 0) { //in charge of receiving ack
+    	int lastack = 0;
     	while (refuse_data == 'f') {
     		struct packet *rcvpkt;
     		rcvpkt = make_packet();
@@ -109,8 +111,12 @@ int main(int argc, char *argv[])
 				close(sockfd);
 				exit(0);
 			}
+			else if (rcvpkt->seq_num == lastack) {
+				//received syn flag, start connection, send packets;
+			}
 			else {
 				printf("Packet Ack: %d\n", rcvpkt->seq_num);
+				lastack = rcvpkt->seq_num;
 				kill(ppid, SIGUSR1);
 				base = rcvpkt->seq_num + DATA_SIZE;
 			}
@@ -122,7 +128,7 @@ int main(int argc, char *argv[])
 				int n_char;
 				int resend_base = base;
 				while (resend_base < nextseq) {
-					pktindex = resend_base - 1;
+					pktindex = (resend_base - 1) % 4;
 					n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0)
 					{

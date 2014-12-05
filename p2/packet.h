@@ -1,17 +1,15 @@
 #define SYN_FLAG 0x0001
 #define ACK_FLAG 0x0002
 #define FIN_FLAG 0x0004
-#define DATA_SIZE 500
+
+#define PACKET_SIZE 1000
+#define DATA_SIZE 990
+
 #pragma pack(1)
 struct packet
 {
-    // Source & destination ports
-    short source_port;
-    short dest_port;
-
     // Sequence and acknowledgement flags
     int seq_num;
-    int ack_num;
 
     // SYN, ACK, FIN flags
     short flags;

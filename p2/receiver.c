@@ -6,22 +6,13 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <unistd.h>
+
 #include "packet.h"
-
-void error(char *msg)
-{
-    perror(msg);
-    exit(0);
-}
-
-double chance()
-{
-    return (double)rand() / (double)RAND_MAX;
-}
+#include "util.h"
 
 void send_ack(int sockfd, struct packet *snd_pkt, struct sockaddr_in serv_addr)
 {
-    printf("Sending ACK with SEQNUM %d to sender...\n", snd_pkt->seq_num);
+    msg("<- ACK: SEQNUM %d ...\n", snd_pkt->seq_num);
     int n_char;
     n_char = sendto(sockfd, snd_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
@@ -104,7 +95,7 @@ int main(int argc, char *argv[])
     file = fopen(strcat(str, filename), "wb");
 
     // Send the initial packet
-    printf("Sending file request to sender...\n");
+    msg("Sending file request to sender...\n");
     n_char = sendto(sockfd, snd_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, serv_addr_size);
     if (n_char < 0)
     {
@@ -126,8 +117,8 @@ int main(int argc, char *argv[])
 
         if (check_fin(rcv_pkt) && (rcv_pkt->seq_num == expect_seq_num)) // server closing connection
         {
-            printf("Received FIN packet from sender\n");
-            printf("Sending FIN-ACK packet to sender, closing...\n");
+            msg("-> FIN\n");
+            msg("<- FIN-ACK, closing...\n");
 
             free(snd_pkt);
             snd_pkt = make_packet();
@@ -148,21 +139,20 @@ int main(int argc, char *argv[])
 
         if (n_char < 0)
         {
-            printf("Packet from sender LOST\n");
+            msg("Packet from sender LOST\n");
         }
         else if (chance() < p_loss)
         {
-            printf("Packet from sender LOST\n");
+            msg("Packet from sender LOST\n");
         }
         else if (chance() < p_corrupt)
         {
-            printf("Packet from sender CORRUPT\n");
+            msg("Packet from sender CORRUPT\n");
             send_ack(sockfd, snd_pkt, serv_addr);
         }
         else if (rcv_pkt->seq_num == expect_seq_num)
         {
-            printf("Received DATA with SEQNUM %d from sender\n", rcv_pkt->seq_num);
-            printf("Length: %d\n", rcv_pkt->d_length);
+            msg("-> DATA: SEQNUM %d\n", rcv_pkt->seq_num);
             fwrite(rcv_pkt->data, 1, rcv_pkt->d_length, file);
 
             free(snd_pkt);
@@ -176,8 +166,16 @@ int main(int argc, char *argv[])
         }
         else
         {
-            printf("Received DATA with SEQNUM %d from sender\n", rcv_pkt->seq_num);
-            send_ack(sockfd, snd_pkt, serv_addr);
+            msg("-> DATA: SEQNUM %d\n", rcv_pkt->seq_num);
+            
+            msg("<- RE-ACK: SEQNUM %d ...\n", snd_pkt->seq_num);
+            int n_char;
+            n_char = sendto(sockfd, snd_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+
+            if (n_char < 0)
+            {
+                error("Error acking packet\n");
+            }
         }
     }
 }

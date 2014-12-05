@@ -1,14 +1,14 @@
-/*
-UPD GBN N=4
-*/
-#include<stdio.h> //printf
-#include<string.h> //memset
-#include<stdlib.h> //exit(0);
+#include <stdio.h> //printf
+#include <string.h> //memset
+#include <stdlib.h> //exit(0);
 #include <unistd.h> // for close
-#include<signal.h>
-#include<arpa/inet.h>
-#include<sys/socket.h>
+#include <signal.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <math.h>
+
 #include "packet.h"
+#include "util.h"
  
 #define N 4 //window size
 #define T 4 //timeout seconds
@@ -21,10 +21,6 @@ void die(char *s, int socket)
     perror(s);
     close(socket);
     exit(1);
-}
-double chance()
-{
-    return (double)rand() / (double)RAND_MAX;
 }
 void handler(int signo)
 {
@@ -43,8 +39,12 @@ void killparent(int signo)
 {
 	killp = 1;
 }
+
 int main(int argc, char *argv[])
 {
+    int cwnd = atoi(argv[2]);
+    int WINDOW_SIZE = (int)floor(cwnd / PACKET_SIZE);
+
 	double p_loss, p_corrupt;
 	int ppid = getpid();
     p_loss = 0.0;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
             die("error in bind\n", sockfd);
     }
     
-    printf("Waiting for syn...\n");
+    msg("Waiting for file request...\n");
     if ((recv_len = recvfrom(sockfd, rcvpkt, sizeof(struct packet), 0, (struct sockaddr *) &cli_si, (socklen_t*)&slen)) == -1)
 	{
         die("error receive syn", sockfd);
@@ -89,21 +89,21 @@ int main(int argc, char *argv[])
     if (check_syn(rcvpkt) != 0) {
     	//received syn flag, start connection, send packets;
     	file = fopen(rcvpkt->data, "rb");
-    	printf("Packet ACK: %d\n", rcvpkt->seq_num);
+    	msg("Received file request\n");
     }
     
     base = 1;
     int nextseq = 1; //next seq count
     int pktindex;
     int timer, rcvr; //timer, rcvr pid
-    struct packet pkt[N];
+    struct packet pkt[WINDOW_SIZE];
 //     char refuse_data = 'f'; //f for false t for true 
     signal(SIGALRM, handler); //sets timeout handler
     signal(SIGUSR1, updatebasehdlr); //sets base update handler
     signal(SIGUSR2, killparent); //sets base update handler
     rcvr = fork();
     if (rcvr == 0) { //in charge of receiving ack
-    	int lastack = 0;
+    	int last_ack = 0;
     	while (1) {
     		struct packet *rcvpkt;
     		rcvpkt = make_packet();
@@ -113,20 +113,20 @@ int main(int argc, char *argv[])
 			}
 			else if (chance() < p_corrupt)
 			{
-				printf("Packet from sender CORRUPT\n");
+				msg("Packet from sender CORRUPT\n");
 			}
 			else if (check_fin(rcvpkt)) {
-				printf("Goodbye...\n");
+				msg("Goodbye...\n");
 				close(sockfd);
 				kill(ppid, SIGUSR2);
 				exit(0);
 			}
-			else if (rcvpkt->seq_num == lastack) {
+			else if (rcvpkt->seq_num == last_ack) {
 				//received syn flag, start connection, send packets;
 			}
 			else {
-				printf("Packet Ack: %d\n", rcvpkt->seq_num);
-				lastack = rcvpkt->seq_num;
+				msg("-> ACK: SEQNUM %d\n", rcvpkt->seq_num);
+				last_ack = rcvpkt->seq_num;
 				kill(ppid, SIGUSR1);
 //				base = rcvpkt->seq_num + 1;
 			}
@@ -142,21 +142,22 @@ int main(int argc, char *argv[])
 			if (timeout == 't') {
 				int n_char;
 				int resend_base = base;
+                msg("TIMEOUT: resending packets %d - %d\n", resend_base, resend_base + WINDOW_SIZE - 1);
 				while (resend_base < nextseq) {
-					pktindex = (resend_base - 1) % 4;
+					pktindex = (resend_base - 1) % WINDOW_SIZE;
 					n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0)
 					{
 						die("Error sending packet during timeout", sockfd);
 					}
-					printf("NextSeq: %d\n", resend_base);
+					msg("Retransmitting DATA with SEQNUM %d ...\n", resend_base);
 					resend_base++;
 				}
 				timeout = 'f';
 				alarm(4);
 			}
 		
-			if (nextseq < base + N) {
+			if (nextseq < base + WINDOW_SIZE) {
 				//while within window, keep sending packet
 				char buf[500];
 				memset(buf, 0, 500);
@@ -171,7 +172,7 @@ int main(int argc, char *argv[])
 						die("Error sending packet during fin", sockfd);
 					}
 					else {
-						printf("Fin packet sent...\n");
+						msg("Sending close signal...\n");
 						alarm(4);
 					}
 				}
@@ -179,10 +180,10 @@ int main(int argc, char *argv[])
 					struct packet *nextpkt = make_packet();
 					set_data(nextpkt, buf, readlength);
 					nextpkt->seq_num = nextseq;
-					pktindex = (nextseq-1)%4;
+					pktindex = (nextseq - 1) % WINDOW_SIZE;
 					pkt[pktindex] = *nextpkt;
 					int n_char;
-					printf("NextSeq: %d\n", nextseq);
+					msg("<- DATA: SEQNUM %d ...\n", nextseq);
 					n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
 					if (n_char < 0) {
 						die("Error sending packet during data", sockfd);

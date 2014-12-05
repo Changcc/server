@@ -172,27 +172,30 @@ int main(int argc, char *argv[])
 					}
 					else {
 						printf("Fin packet sent...\n");
+						alarm(4);
 					}
 				}
-				struct packet *nextpkt = make_packet();
-				set_data(nextpkt, buf, readlength);
-				nextpkt->seq_num = nextseq;
-				pktindex = (nextseq-1)%4;
-				pkt[pktindex] = *nextpkt;
-				int n_char;
-				printf("NextSeq: %d\n", nextseq);
-				n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
-				if (n_char < 0) {
-					die("Error sending packet during data", sockfd);
-				}
 				else {
-					//printf("Data sent: %s\n", pkt[pktindex].data);
+					struct packet *nextpkt = make_packet();
+					set_data(nextpkt, buf, readlength);
+					nextpkt->seq_num = nextseq;
+					pktindex = (nextseq-1)%4;
+					pkt[pktindex] = *nextpkt;
+					int n_char;
+					printf("NextSeq: %d\n", nextseq);
+					n_char = sendto(sockfd, &pkt[pktindex], sizeof(pkt[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
+					if (n_char < 0) {
+						die("Error sending packet during data", sockfd);
+					}
+					else {
+						//printf("Data sent: %s\n", pkt[pktindex].data);
+					}
+					if (nextseq == base) {
+						//start timer
+						alarm(4);
+					}
+					nextseq++;
 				}
-				if (nextseq == base) {
-					//start timer
-					alarm(4);
-				}
-				nextseq++;
 			}
 			else {
 				//refuse_data = 't';

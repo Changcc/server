@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
     serv_addr_size = sizeof(serv_addr);
 
-    file = fopen(strcat(filename, "_copy"), "wb");
+    file = fopen(strcat("copy_", filename), "wb");
 
     // Send the initial packet
     printf("Sending file request to sender...\n");

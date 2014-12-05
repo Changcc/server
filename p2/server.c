@@ -77,8 +77,8 @@ int main(int argc, char *argv[])
     	file = fopen(rcvpkt->data, "r");
     }
     
-    int base = 0;
-    int nextseq = 0; //next seq count
+    int base = 1;
+    int nextseq = 1; //next seq count
     int timer, rcvr; //timer, rcvr pid
     struct packet pkt[N];
     char refuse_data = 'f'; //f for false t for true 
@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
 				}
 				struct packet *nextpkt = make_packet();
 				set_data(nextpkt, buf);
+				nextpkt->seq_num = nextseq;
 				pkt[nextseq] = *nextpkt;
 				int n_char;
 				n_char = sendto(sockfd, &pkt[nextseq], sizeof(pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);

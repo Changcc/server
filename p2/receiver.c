@@ -20,7 +20,7 @@ double chance()
 
 void send_ack(int sockfd, struct packet *snd_pkt, struct sockaddr_in serv_addr)
 {
-    printf("Sending ACK with SEQNUM %d to sender...", snd_pkt->seq_num);
+    printf("Sending ACK with SEQNUM %d to sender...\n", snd_pkt->seq_num);
     int n_char;
     n_char = sendto(sockfd, snd_pkt, sizeof(struct packet), 0, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
         }
         else if (rcv_pkt->seq_num == expect_seq_num)
         {
-            printf("Received DATA with SEQNUM %d from sender", rcv_pkt->seq_num);
+            printf("Received DATA with SEQNUM %d from sender\n", rcv_pkt->seq_num);
             fwrite(rcv_pkt->data, 1, rcv_pkt->d_length, file);
 
             free(snd_pkt);
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            printf("Received DATA with SEQNUM %d from sender", rcv_pkt->seq_num);
+            printf("Received DATA with SEQNUM %d from sender\n", rcv_pkt->seq_num);
             send_ack(sockfd, snd_pkt, serv_addr);
         }
     }

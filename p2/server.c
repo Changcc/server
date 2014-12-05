@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 				char buf[500];
 				memset(buf, 0, 500);
 				int readlength;
-				if ((readlength = fread(buf, sizeof(char),  sizeof(buf), file) == 0) {
+				if ((readlength = fread(buf, sizeof(char),  sizeof(buf), file)) == 0) {
 					struct packet *finpkt = make_packet();
 					set_fin(finpkt);
 					int n_char;

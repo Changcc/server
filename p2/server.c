@@ -71,10 +71,6 @@ int main(int argc, char *argv[])
 	{
         die("error receive syn", sockfd);
 	}
-
-    printf("%d\n", recv_len);
-    printf("%s\n", rcvpkt->data);
-    printf("%d\n", check_syn(rcvpkt));
     
     if (check_syn(rcvpkt) != 0) {
     	//received syn flag, start connection, send packets
@@ -86,7 +82,7 @@ int main(int argc, char *argv[])
     int timer, rcvr; //timer, rcvr pid
     struct packet pkt[N];
     char refuse_data = 'f'; //f for false t for true 
-    
+    signal(SIGALRM, handler); //sets timeout handler
     rcvr = fork();
     if (rcvr == 0) { //in charge of receiving ack
     	while (refuse_data == 'f') {
@@ -101,60 +97,66 @@ int main(int argc, char *argv[])
 				printf("Packet from sender CORRUPT\n");
 			}
 			else {
-				printf("Packet Ack: %d\n", rcvpkt->ack_num);
-				base = rcvpkt->ack_num + DATA_SIZE;
+				printf("Packet Ack: %d\n", rcvpkt->seq_num);
+				base = rcvpkt->seq_num + DATA_SIZE;
 			}
     	}
     }
-    
-    signal(SIGALRM, handler); //sets timeout handler
-    
-    while (1) { //in charge of sending packets
-    	if (timeout == 't') {
-    		int n_char;
-    		int resend_base = base;
-    		while (resend_base < nextseq) {
-				n_char = sendto(sockfd, &pkt[resend_base], sizeof(&pkt[resend_base]), 0, (struct sockaddr*)&cli_si, slen);
-				if (n_char < 0)
-				{
-					die("Error sending packet", sockfd);
-				}
-				resend_base++;
-			}
-			timeout = 'f';
-    	}
-    	
-		if (nextseq < base + N) {
-			//while within window, keep sending packet
-			char buf[DATA_SIZE];
-			if (fread(buf, sizeof(char),  sizeof(buf), file) == 0) {
-				struct packet *finpkt = make_packet();
-				set_fin(finpkt);
+    else { //is parent process
+		while (1) { //in charge of sending packets
+			if (timeout == 't') {
 				int n_char;
-				n_char = sendto(sockfd, &pkt[nextseq], sizeof(&pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);
+				int resend_base = base;
+				while (resend_base < nextseq) {
+					n_char = sendto(sockfd, &pkt[resend_base], sizeof(pkt[resend_base]), 0, (struct sockaddr*)&cli_si, slen);
+					if (n_char < 0)
+					{
+						die("Error sending packet", sockfd);
+					}
+					resend_base++;
+				}
+				timeout = 'f';
+			}
+		
+			if (nextseq < base + N) {
+				//while within window, keep sending packet
+				char buf[500];
+				memset(buf, 0, 500);
+				if (fread(buf, sizeof(char),  sizeof(buf), file) == 0) {
+					struct packet *finpkt = make_packet();
+					set_fin(finpkt);
+					int n_char;
+					n_char = sendto(sockfd, finpkt, sizeof(struct packet), 0, (struct sockaddr*)&cli_si, slen);
+					if (n_char < 0) {
+						die("Error sending packet", sockfd);
+					}
+					else {
+						close(sockfd);
+						exit(0);
+					}
+				}
+				struct packet *nextpkt = make_packet();
+				set_data(nextpkt, buf);
+				pkt[nextseq] = *nextpkt;
+				int n_char;
+				n_char = sendto(sockfd, &pkt[nextseq], sizeof(pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);
 				if (n_char < 0) {
 					die("Error sending packet", sockfd);
 				}
+				else {
+					printf("Data sent: %s\n", pkt[nextseq].data);
+				}
+				if (nextseq == base) {
+					//start timer
+					alarm(4);
+				}
+				nextseq++;
 			}
-			struct packet *nextpkt = make_packet();
-			set_data(nextpkt, buf);
-			
-    		int n_char;
-			n_char = sendto(sockfd, &pkt[nextseq], sizeof(&pkt[nextseq]), 0, (struct sockaddr*)&cli_si, slen);
-			if (n_char < 0) {
-				die("Error sending packet", sockfd);
+			else {
+				refuse_data = 't';
 			}
-			if (nextseq == base) {
-				//start timer
-				alarm(4);
-			}
-			nextseq++;
-		}
-		else {
-			refuse_data = 't';
 		}
     }
-    
     close(sockfd);
     return 0;
 }

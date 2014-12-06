@@ -1,4 +1,4 @@
-CC=gcc
+CC=gcc -g
 
 all: clean util.o packet.o sender.o receiver.o
 	$(CC) -o sender sender.o util.o packet.o
@@ -10,4 +10,4 @@ all: clean util.o packet.o sender.o receiver.o
 .PHONY: clean
 
 clean:
-	rm *.o
+	rm -f *.o

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <unistd.h>
 
 void error(char *msg)
 {
@@ -31,4 +32,12 @@ void msg(const char *format, ...)
    va_start (arg, format);
    vprintf (format, arg);
    va_end (arg);
+}
+
+void teardown(FILE* file, int sockfd)
+{
+   msg("Tearing down connection\n");
+   fclose(file);
+   close(sockfd);
+   exit(0);
 }

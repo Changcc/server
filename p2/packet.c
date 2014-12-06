@@ -17,6 +17,11 @@ int check_fin(struct packet *p)
     return p->flags & FIN_FLAG;
 }
 
+int check_none(struct packet *p)
+{
+    return p->flags & NONE_FLAG;
+}
+
 void set_syn(struct packet *p)
 {
     p->flags |= SYN_FLAG;
@@ -32,7 +37,12 @@ void set_fin(struct packet *p)
     p->flags |= FIN_FLAG;
 }
 
-struct packet* make_packet()
+void set_none(struct packet *p)
+{
+    p->flags |= NONE_FLAG;
+}
+
+struct packet make_packet()
 {
     struct packet *p = malloc(sizeof(struct packet));
 
@@ -41,10 +51,10 @@ struct packet* make_packet()
 
     memset(p->data, 0, DATA_SIZE);
 
-    return p;
+    return *p;
 }
 
-void set_data(struct packet* p, char *data, int length)
+void set_data(struct packet *p, char *data, int length)
 {
     memcpy(p->data, data, length);
 

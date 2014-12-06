@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
             break;
     }
 
-    WINDOW_SIZE = (int)floor(cwnd / PACKET_SIZE);
+    WINDOW_SIZE = cwnd / PACKET_SIZE;
 
     //create a UDP socket
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
@@ -179,7 +179,6 @@ int main(int argc, char *argv[])
 
             msg("TIMEOUT: resending packets %d - %d\n", resend_base, min(resend_base + WINDOW_SIZE - 1, n_packets));
             
-            printf("%d %d\n", resend_base, next_seq);
             while (resend_base < next_seq) {
                 pktindex = (resend_base - 1) % WINDOW_SIZE;
                 send_len = sendto(sockfd, &pkt_win[pktindex], sizeof(pkt_win[pktindex]), 0, (struct sockaddr*)&cli_si, slen);
@@ -191,11 +190,6 @@ int main(int argc, char *argv[])
                 resend_base++;
             }
 
-            for (i = 0; i < WINDOW_SIZE; i++)
-            {
-                printf("%d, ", pkt_win[i].seq_num);
-            }
-            printf("\n");
             timeout = 0;
             alarm(TO_SEC);
         }
@@ -227,8 +221,6 @@ int main(int argc, char *argv[])
             msg("-> ACK: SEQNUM %d\n", rcv_pkt.seq_num);
             last_ack = rcv_pkt.seq_num;
             base = rcv_pkt.seq_num + 1;
-
-            // printf("%d, %d\n", next_seq, base);
 
             // Send packets
             if (next_seq <= min(base + WINDOW_SIZE, n_packets + 1)) {

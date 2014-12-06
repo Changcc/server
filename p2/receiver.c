@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "packet.h"
@@ -112,6 +112,14 @@ int main(int argc, char *argv[])
         rcv_pkt = make_packet();
 
         n_char = recvfrom(sockfd, &rcv_pkt, sizeof(rcv_pkt), 0, (struct sockaddr*)&serv_addr, (socklen_t*)&slen);
+
+        if (check_none(&rcv_pkt))
+        {
+            msg("No such file exists on the sender side\n");
+            fclose(file);
+            remove(str);
+            teardown(NULL, sockfd);
+        }
 
         if (check_fin(&rcv_pkt)) // server closing connection
         {

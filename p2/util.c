@@ -37,7 +37,8 @@ void msg(const char *format, ...)
 void teardown(FILE* file, int sockfd)
 {
    msg("Tearing down connection\n");
-   fclose(file);
+   if (file != NULL)
+      fclose(file);
    close(sockfd);
    exit(0);
 }

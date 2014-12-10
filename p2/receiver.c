@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <libgen.h>
 
 #include "packet.h"
 #include "util.h"
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char *hostname, *filename;
+    char *hostname, *filepath;
 
     double p_loss, p_corrupt;
     p_loss = 0.0;
@@ -43,7 +44,7 @@ int main(int argc, char *argv[])
 
     if (argc < 4)
     {
-        fprintf(stderr, "Usage: %s hostname port filename [loss ratio] [corrupt ratio]\n", argv[0]);
+        fprintf(stderr, "Usage: %s hostname port filepath [loss ratio] [corrupt ratio]\n", argv[0]);
         exit(0);
     }
 
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
         case 5:
             p_loss = atof(argv[4]);
         default:
-            filename = argv[3];
+            filepath = argv[3];
             portno = atoi(argv[2]);
             hostname = argv[1];
             break;
@@ -85,12 +86,16 @@ int main(int argc, char *argv[])
 
     set_syn(&snd_pkt);
     snd_pkt.seq_num = 0;
-    set_data(&snd_pkt, filename, strlen(filename));
+    set_data(&snd_pkt, filepath, strlen(filepath));
 
     slen = sizeof(serv_addr);
 
     char str[100] = "copy_";
-    file = fopen(strcat(str, filename), "wb");
+
+    char *dir = dirname(filepath);
+    char *base = basename(filepath);
+
+    file = fopen(strcat(str, base), "wb");
 
     // Send the initial packet
     msg("Sending file request to sender...\n");

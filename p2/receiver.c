@@ -92,10 +92,13 @@ int main(int argc, char *argv[])
 
     char str[100] = "copy_";
 
-    char *dir = dirname(filepath);
-    char *base = basename(filepath);
+    char *dirc, *basec, *dname, *bname;
+    dirc = strdup(filepath);
+    basec = strdup(filepath);
+    dname = dirname(dirc);
+    bname = basename(basec);
 
-    file = fopen(strcat(str, base), "wb");
+    file = fopen(strcat(str, bname), "wb");
 
     // Send the initial packet
     msg("Sending file request to sender...\n");
